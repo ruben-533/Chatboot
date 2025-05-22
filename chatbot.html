@@ -34,5 +34,46 @@
             <button onclick="chatBot.handleUserInput()">➤</button>
         </div>
     </div>
+
+
+    <script>
+        // Clase para manejar elementos del DOM
+        class DOMManager {
+            constructor() {
+                this.chatMessages = document.getElementById('chat-messages');
+                this.botTyping = document.getElementById('bot-typing');
+                this.userInput = document.getElementById('user-input');
+            }
+
+            addMessage(text, sender) {
+                const msg = document.createElement('div');
+                msg.className = `message ${sender}-message`;
+                msg.textContent = text;
+                this.chatMessages.appendChild(msg);
+                this.scrollToBottom();
+            }
+
+            scrollToBottom() {
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+
+            showTyping() {
+                this.botTyping.style.display = 'block';
+            }
+
+            hideTyping() {
+                this.botTyping.style.display = 'none';
+            }
+
+            clearInput() {
+                this.userInput.value = '';
+            }
+
+            getUserInput() {
+                return this.userInput.value.trim();
+            }
+        }
+    </script>
+
 </body>
 </html>
