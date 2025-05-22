@@ -151,6 +151,49 @@
             }
         }
 
+
+        // Base para respuestas que puede extenderse sin modificar código existente
+        class ResponseHandler {
+            constructor() {
+                this.responses = {
+                    cita: "Para agendar una cita médica, necesitamos algunos datos. Por favor, complete el siguiente formulario:",
+                    horario: "Nuestro centro de salud atiende en los siguientes horarios: Lunes a viernes de 7:00 AM a 8:00 PM, sábados de 8:00 AM a 2:00 PM. El área de emergencias está disponible las 24 horas.",
+                    especialidades: "Contamos con: Medicina General, Pediatría, Ginecología, Cardiología, Dermatología, Traumatología, Odontología y Psicología.",
+                    emergencia: "Si tiene una emergencia, acuda al área de Urgencias o llame al 911. Atendemos 24/7.",
+                    covid: "Ofrecemos pruebas de COVID-19 con cita previa. Use mascarilla y mantenga distancia si tiene síntomas.",
+                    vacuna: "Vacunas disponibles: influenza, COVID-19, tétanos y más. Horario: Lunes a viernes de 9:00 AM a 4:00 PM.",
+                    precio: "Los precios varían según el servicio. Aceptamos seguros y ofrecemos tarifas sociales.",
+                    resultado: "Resultados disponibles 72 horas después del examen. Puede consultarlos en línea o recogerlos con identificación.",
+                    seguros: "Aceptamos SeguroSalud, MediProtect, SaludTotal y seguros estatales.",
+                    default: "Gracias por su consulta. Llámenos al 555-123-4567 o visite www.centrosalud.com."
+                };
+
+                this.patterns = [
+                    { keywords: ['cita', 'agendar', 'reservar', 'turno'], responseKey: 'cita' },
+                    { keywords: ['horario', 'hora', 'atención', 'cuando'], responseKey: 'horario' },
+                    { keywords: ['especialidad', 'doctor', 'médico', 'especialista'], responseKey: 'especialidades' },
+                    { keywords: ['emergencia', 'urgencia', 'grave'], responseKey: 'emergencia' },
+                    { keywords: ['covid', 'prueba', 'coronavirus', 'test'], responseKey: 'covid' },
+                    { keywords: ['vacuna', 'inmunización', 'inyección'], responseKey: 'vacuna' },
+                    { keywords: ['precio', 'tarifa', 'pagar', 'costo'], responseKey: 'precio' },
+                    { keywords: ['resultado', 'examen', 'análisis', 'laboratorio'], responseKey: 'resultado' },
+                    { keywords: ['seguros', 'plan', 'cobertura'], responseKey: 'seguros' }
+                ];
+            }
+
+            findResponse(message) {
+                const lowerMessage = message.toLowerCase();
+                const match = this.patterns.find(p => 
+                    p.keywords.some(k => lowerMessage.includes(k))
+                );
+                return match ? match.responseKey : 'default';
+            }
+
+            getResponse(key) {
+                return this.responses[key] || this.responses.default;
+            }
+        }
+
     </script>
 
 </body>
