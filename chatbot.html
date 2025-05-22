@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHABOOT👨‍⚕️</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <span class="header-icon">👨‍⚕️</span>Centro HOLANDA
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                ¡Bienvenido al Centro de Salud HOLANDA. Soy Eli tu asistente virtual. ¿En qué puedo ayudarle hoy?
+            </div>
+        </div>
+        <div class="bot-typing" id="bot-typing">
+            <div class="typing-dots">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        </div>
+        <div class="quick-buttons">
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Agendar cita')">Agendar cita</button>
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Horarios de atención')">Horarios</button>
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Especialidades médicas')">Especialidades</button>
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Emergencias')">Emergencias</button>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Escribe tu consulta aquí..." autocomplete="off">
+            <button onclick="chatBot.handleUserInput()">➤</button>
+        </div>
+    </div>
+
+
+    <script>
+        // Clase para manejar elementos del DOM
+        class DOMManager {
+            constructor() {
+                this.chatMessages = document.getElementById('chat-messages');
+                this.botTyping = document.getElementById('bot-typing');
+                this.userInput = document.getElementById('user-input');
+            }
+
+            addMessage(text, sender) {
+                const msg = document.createElement('div');
+                msg.className = `message ${sender}-message`;
+                msg.textContent = text;
+                this.chatMessages.appendChild(msg);
+                this.scrollToBottom();
+            }
+
+            scrollToBottom() {
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+
+            showTyping() {
+                this.botTyping.style.display = 'block';
+            }
+
+            hideTyping() {
+                this.botTyping.style.display = 'none';
+            }
+
+            clearInput() {
+                this.userInput.value = '';
+            }
+
+            getUserInput() {
+                return this.userInput.value.trim();
+            }
+        }
+
+
+        // Clase para validaciones
+        class Validator {
+            static isNotEmpty(value) {
+                return value && value.trim() !== '';
+            }
+
+            static isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+
+            static isValidPhone(phone) {
+                const phoneRegex = /^\d{8,15}$/;
+                return phoneRegex.test(phone.replace(/\s+/g, ''));
+            }
+
+            static validateAppointmentData(data) {
+                const errors = [];
+                
+                if (!this.isNotEmpty(data.name)) {
+                    errors.push('El nombre es requerido');
+                }
+                
+                if (!this.isValidPhone(data.phone)) {
+                    errors.push('Teléfono inválido');
+                }
+                
+                if (!this.isValidEmail(data.email)) {
+                    errors.push('Email inválido');
+                }
+                
+                if (!this.isNotEmpty(data.specialty)) {
+                    errors.push('Especialidad es requerida');
+                }
+                
+                if (!this.isNotEmpty(data.date)) {
+                    errors.push('Fecha es requerida');
+                }
+                
+                if (!this.isNotEmpty(data.time)) {
+                    errors.push('Hora es requerida');
+                }
+
+                return {
+                    isValid: errors.length === 0,
+                    errors
+                };
+            }
+        }
+
+
+        // Clase para formateo de datos
+        class Formatter {
+            static formatDate(dateStr) {
+                return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-ES', {
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric'
+                });
+            }
+
+            static formatTime(timeStr) {
+                const [h, m] = timeStr.split(':');
+                const hour = parseInt(h);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const hour12 = hour % 12 || 12;
+                return `${hour12}:${m} ${ampm}`;
+            }
+
+            static getCurrentDate() {
+                const today = new Date();
+                return today.toISOString().split('T')[0];
+            }
+        }
+
+
+        // Base para respuestas que puede extenderse sin modificar código existente
+        class ResponseHandler {
+            constructor() {
+                this.responses = {
+                    cita: "Para agendar una cita médica, necesitamos algunos datos. Por favor, complete el siguiente formulario:",
+                    horario: "Nuestro centro de salud atiende en los siguientes horarios: Lunes a viernes de 7:00 AM a 8:00 PM, sábados de 8:00 AM a 2:00 PM. El área de emergencias está disponible las 24 horas.",
+                    especialidades: "Contamos con: Medicina General, Pediatría, Ginecología, Cardiología, Dermatología, Traumatología, Odontología y Psicología.",
+                    emergencia: "Si tiene una emergencia, acuda al área de Urgencias o llame al 911. Atendemos 24/7.",
+                    covid: "Ofrecemos pruebas de COVID-19 con cita previa. Use mascarilla y mantenga distancia si tiene síntomas.",
+                    vacuna: "Vacunas disponibles: influenza, COVID-19, tétanos y más. Horario: Lunes a viernes de 9:00 AM a 4:00 PM.",
+                    precio: "Los precios varían según el servicio. Aceptamos seguros y ofrecemos tarifas sociales.",
+                    resultado: "Resultados disponibles 72 horas después del examen. Puede consultarlos en línea o recogerlos con identificación.",
+                    seguros: "Aceptamos SeguroSalud, MediProtect, SaludTotal y seguros estatales.",
+                    default: "Gracias por su consulta. Llámenos al 555-123-4567 o visite www.centrosalud.com."
+                };
+
+                this.patterns = [
+                    { keywords: ['cita', 'agendar', 'reservar', 'turno'], responseKey: 'cita' },
+                    { keywords: ['horario', 'hora', 'atención', 'cuando'], responseKey: 'horario' },
+                    { keywords: ['especialidad', 'doctor', 'médico', 'especialista'], responseKey: 'especialidades' },
+                    { keywords: ['emergencia', 'urgencia', 'grave'], responseKey: 'emergencia' },
+                    { keywords: ['covid', 'prueba', 'coronavirus', 'test'], responseKey: 'covid' },
+                    { keywords: ['vacuna', 'inmunización', 'inyección'], responseKey: 'vacuna' },
+                    { keywords: ['precio', 'tarifa', 'pagar', 'costo'], responseKey: 'precio' },
+                    { keywords: ['resultado', 'examen', 'análisis', 'laboratorio'], responseKey: 'resultado' },
+                    { keywords: ['seguros', 'plan', 'cobertura'], responseKey: 'seguros' }
+                ];
+            }
+
+            findResponse(message) {
+                const lowerMessage = message.toLowerCase();
+                const match = this.patterns.find(p => 
+                    p.keywords.some(k => lowerMessage.includes(k))
+                );
+                return match ? match.responseKey : 'default';
+            }
+
+            getResponse(key) {
+                return this.responses[key] || this.responses.default;
+            }
+        }
+
+
+        // Clase para manejo de citas
+        class AppointmentManager {
+            constructor(domManager) {
+                this.domManager = domManager;
+                this.specialties = [
+                    'Medicina General', 'Pediatría', 'Ginecología', 'Cardiología',
+                    'Dermatología', 'Traumatología', 'Odontología', 'Psicología'
+                ];
+                this.timeSlots = ['09:00', '10:00', '11:00', '12:00', '15:00', '16:00', '17:00'];
+            }
+
+            showForm() {
+                const form = this.createFormElement();
+                this.domManager.chatMessages.appendChild(form);
+                this.domManager.scrollToBottom();
+            }
+
+            createFormElement() {
+                const form = document.createElement('div');
+                form.className = 'appointment-form';
+                form.innerHTML = `
+                    <div>Complete sus datos para agendar la cita:</div>
+                    <input id="name-input" placeholder="Nombre completo" required>
+                    <input id="phone-input" placeholder="Teléfono" required>
+                    <input id="email-input" type="email" placeholder="Correo electrónico" required>
+                    <select id="specialty-input" required>
+                        <option value="" disabled selected>Especialidad</option>
+                        ${this.specialties.map(s => `<option value="${s}">${s}</option>`).join('')}
+                    </select>
+                    <input type="date" id="date-input" min="${Formatter.getCurrentDate()}" required>
+                    <select id="time-input" required>
+                        <option value="" disabled selected>Horario</option>
+                        ${this.timeSlots.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                    <button onclick="chatBot.submitAppointment()">Enviar solicitud</button>
+                `;
+                return form;
+            }
+
+            getFormData() {
+                return {
+                    name: document.getElementById('name-input')?.value.trim() || '',
+                    phone: document.getElementById('phone-input')?.value.trim() || '',
+                    email: document.getElementById('email-input')?.value.trim() || '',
+                    specialty: document.getElementById('specialty-input')?.value || '',
+                    date: document.getElementById('date-input')?.value || '',
+                    time: document.getElementById('time-input')?.value || ''
+                };
+            }
+
+            removeForm() {
+                const forms = document.getElementsByClassName('appointment-form');
+                if (forms.length > 0) forms[0].remove();
+            }
+
+            processAppointment() {
+                const data = this.getFormData();
+                const validation = Validator.validateAppointmentData(data);
+
+                if (!validation.isValid) {
+                    alert('Error: ' + validation.errors.join(', '));
+                    return;
+                }
+
+                this.removeForm();
+                this.confirmAppointment(data);
+            }
+
+            confirmAppointment(data) {
+                this.domManager.addMessage("Su solicitud de cita ha sido recibida.", 'bot');
+                
+                setTimeout(() => {
+                    const confirmation = `✅ CITA APROBADA ✅\n\nEstimado/a ${data.name},\nSu cita para ${data.specialty} fue confirmada para el ${Formatter.formatDate(data.date)} a las ${Formatter.formatTime(data.time)}.\nLe enviaremos un recordatorio al correo ${data.email} y al teléfono ${data.phone}.`;
+                    this.domManager.addMessage(confirmation, 'bot');
+                }, 1500);
+            }
+        }
+
+
+        // ChatBot depende de abstracciones, no de concreciones
+        class ChatBot {
+            constructor() {
+                this.domManager = new DOMManager();
+                this.responseHandler = new ResponseHandler();
+                this.appointmentManager = new AppointmentManager(this.domManager);
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.domManager.userInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleUserInput();
+                });
+            }
+
+            handleUserInput() {
+                const message = this.domManager.getUserInput();
+                if (!message) return;
+
+                this.domManager.addMessage(message, 'user');
+                this.simulateTyping(() => this.processMessage(message));
+                this.domManager.clearInput();
+            }
+
+            handleQuickMessage(message) {
+                this.domManager.addMessage(message, 'user');
+                this.simulateTyping(() => this.processMessage(message));
+            }
+
+            simulateTyping(callback) {
+                this.domManager.showTyping();
+                setTimeout(() => {
+                    this.domManager.hideTyping();
+                    callback();
+                }, 1500);
+            }
+
+            processMessage(message) {
+                const responseKey = this.responseHandler.findResponse(message);
+                const response = this.responseHandler.getResponse(responseKey);
+                
+                this.domManager.addMessage(response, 'bot');
+                
+                if (responseKey === 'cita') {
+                    this.appointmentManager.showForm();
+                }
+            }
+
+            submitAppointment() {
+                this.appointmentManager.processAppointment();
+            }
+        }
+
+
+        // Inicialización
+        const chatBot = new ChatBot();
+    </script>
+
+</body>
+</html>
