@@ -194,6 +194,85 @@
             }
         }
 
+
+        // Clase para manejo de citas
+        class AppointmentManager {
+            constructor(domManager) {
+                this.domManager = domManager;
+                this.specialties = [
+                    'Medicina General', 'Pediatría', 'Ginecología', 'Cardiología',
+                    'Dermatología', 'Traumatología', 'Odontología', 'Psicología'
+                ];
+                this.timeSlots = ['09:00', '10:00', '11:00', '12:00', '15:00', '16:00', '17:00'];
+            }
+
+            showForm() {
+                const form = this.createFormElement();
+                this.domManager.chatMessages.appendChild(form);
+                this.domManager.scrollToBottom();
+            }
+
+            createFormElement() {
+                const form = document.createElement('div');
+                form.className = 'appointment-form';
+                form.innerHTML = `
+                    <div>Complete sus datos para agendar la cita:</div>
+                    <input id="name-input" placeholder="Nombre completo" required>
+                    <input id="phone-input" placeholder="Teléfono" required>
+                    <input id="email-input" type="email" placeholder="Correo electrónico" required>
+                    <select id="specialty-input" required>
+                        <option value="" disabled selected>Especialidad</option>
+                        ${this.specialties.map(s => `<option value="${s}">${s}</option>`).join('')}
+                    </select>
+                    <input type="date" id="date-input" min="${Formatter.getCurrentDate()}" required>
+                    <select id="time-input" required>
+                        <option value="" disabled selected>Horario</option>
+                        ${this.timeSlots.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                    <button onclick="chatBot.submitAppointment()">Enviar solicitud</button>
+                `;
+                return form;
+            }
+
+            getFormData() {
+                return {
+                    name: document.getElementById('name-input')?.value.trim() || '',
+                    phone: document.getElementById('phone-input')?.value.trim() || '',
+                    email: document.getElementById('email-input')?.value.trim() || '',
+                    specialty: document.getElementById('specialty-input')?.value || '',
+                    date: document.getElementById('date-input')?.value || '',
+                    time: document.getElementById('time-input')?.value || ''
+                };
+            }
+
+            removeForm() {
+                const forms = document.getElementsByClassName('appointment-form');
+                if (forms.length > 0) forms[0].remove();
+            }
+
+            processAppointment() {
+                const data = this.getFormData();
+                const validation = Validator.validateAppointmentData(data);
+
+                if (!validation.isValid) {
+                    alert('Error: ' + validation.errors.join(', '));
+                    return;
+                }
+
+                this.removeForm();
+                this.confirmAppointment(data);
+            }
+
+            confirmAppointment(data) {
+                this.domManager.addMessage("Su solicitud de cita ha sido recibida.", 'bot');
+                
+                setTimeout(() => {
+                    const confirmation = `✅ CITA APROBADA ✅\n\nEstimado/a ${data.name},\nSu cita para ${data.specialty} fue confirmada para el ${Formatter.formatDate(data.date)} a las ${Formatter.formatTime(data.time)}.\nLe enviaremos un recordatorio al correo ${data.email} y al teléfono ${data.phone}.`;
+                    this.domManager.addMessage(confirmation, 'bot');
+                }, 1500);
+            }
+        }
+
     </script>
 
 </body>
