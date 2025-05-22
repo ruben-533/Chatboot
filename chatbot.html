@@ -6,4 +6,33 @@
     <title>CHABOOT👨‍⚕️</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <span class="header-icon">👨‍⚕️</span>Centro HOLANDA
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                ¡Bienvenido al Centro de Salud HOLANDA. Soy Eli tu asistente virtual. ¿En qué puedo ayudarle hoy?
+            </div>
+        </div>
+        <div class="bot-typing" id="bot-typing">
+            <div class="typing-dots">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        </div>
+        <div class="quick-buttons">
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Agendar cita')">Agendar cita</button>
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Horarios de atención')">Horarios</button>
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Especialidades médicas')">Especialidades</button>
+            <button class="quick-button" onclick="chatBot.handleQuickMessage('Emergencias')">Emergencias</button>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Escribe tu consulta aquí..." autocomplete="off">
+            <button onclick="chatBot.handleUserInput()">➤</button>
+        </div>
+    </div>
+</body>
 </html>
