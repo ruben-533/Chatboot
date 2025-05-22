@@ -273,6 +273,60 @@
             }
         }
 
+
+        // ChatBot depende de abstracciones, no de concreciones
+        class ChatBot {
+            constructor() {
+                this.domManager = new DOMManager();
+                this.responseHandler = new ResponseHandler();
+                this.appointmentManager = new AppointmentManager(this.domManager);
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                this.domManager.userInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleUserInput();
+                });
+            }
+
+            handleUserInput() {
+                const message = this.domManager.getUserInput();
+                if (!message) return;
+
+                this.domManager.addMessage(message, 'user');
+                this.simulateTyping(() => this.processMessage(message));
+                this.domManager.clearInput();
+            }
+
+            handleQuickMessage(message) {
+                this.domManager.addMessage(message, 'user');
+                this.simulateTyping(() => this.processMessage(message));
+            }
+
+            simulateTyping(callback) {
+                this.domManager.showTyping();
+                setTimeout(() => {
+                    this.domManager.hideTyping();
+                    callback();
+                }, 1500);
+            }
+
+            processMessage(message) {
+                const responseKey = this.responseHandler.findResponse(message);
+                const response = this.responseHandler.getResponse(responseKey);
+                
+                this.domManager.addMessage(response, 'bot');
+                
+                if (responseKey === 'cita') {
+                    this.appointmentManager.showForm();
+                }
+            }
+
+            submitAppointment() {
+                this.appointmentManager.processAppointment();
+            }
+        }
+
     </script>
 
 </body>
